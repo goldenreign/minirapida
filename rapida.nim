@@ -1,7 +1,32 @@
-import os, re, jester, asyncdispatch, htmlgen, asyncnet, strutils, parseopt2
+import os, re, jester, asyncdispatch, htmlgen, asyncnet, strutils, parseopt2, parseutils
+
+let usageString = "Usage: rapida [dir] [--port:8001]"
+var boundDir = "."
+var boundPort = 8001
+for kind, key, val in getopt():
+    case kind
+    of cmdArgument:
+        if not existsDir(key):
+            echo format("Wrong directory: $1", key)
+            echo usageString
+            quit(QuitFailure)
+        else:
+            boundDir = key
+    of cmdLongOption, cmdShortOption:
+        case key
+        of "port", "p":
+            let convResult = parseutils.parseInt(val, boundPort)
+            if convResult == 0:
+                echo format("Wrong port: $1", val)
+                echo usageString
+                quit(QuitFailure)
+        else:
+            discard
+    of cmdEnd:
+        discard
 
 settings:
-  port = Port(8001)
+  port = Port(boundPort)
   appName = ""
   bindAddr = ""
 
@@ -61,13 +86,5 @@ routes:
       resp("Got file, thanks!")
       echo format("Wrote file \"$1\"", request.formData["file"].fields["filename"])
 
-var dir = "."
-for kind, key, val in getopt():
-    case kind
-    of cmdArgument:
-        dir = key
-    of cmdLongOption, cmdShortOption, cmdEnd:
-        discard
-
-setCurrentDir(dir)
+setCurrentDir(boundDir)
 runForever()
