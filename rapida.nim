@@ -1,15 +1,19 @@
 import os, re, jester, asyncdispatch, htmlgen, asyncnet, strutils, parseopt2, parseutils
 
-let usageString = "Usage: rapida [dir] [--port:8001]"
+proc showUsageAndQuit(code) =
+    let usageString = "Usage: rapida [dir] [--port:8001] [--sub:on]"
+    echo usageString
+    quit(code)
+
 var boundDir = "."
 var boundPort = 8001
+var showSubdirs = true
 for kind, key, val in getopt():
     case kind
     of cmdArgument:
         if not existsDir(key):
             echo format("Wrong directory: $1", key)
-            echo usageString
-            quit(QuitFailure)
+            showUsageAndQuit(QuitFailure)
         else:
             boundDir = key
     of cmdLongOption, cmdShortOption:
@@ -18,12 +22,24 @@ for kind, key, val in getopt():
             let convResult = parseutils.parseInt(val, boundPort)
             if convResult == 0:
                 echo format("Wrong port: $1", val)
-                echo usageString
-                quit(QuitFailure)
+                showUsageAndQuit(QuitFailure)
+        of "sub", "s":
+            case val
+            of "on":
+                showSubdirs = true
+            of "off":
+                showSubdirs = false
+            else:
+                echo format("Wrong subdirectory option: $1, expected <on|off>", val)
+                showUsageAndQuit(QuitFailure)
+        of "help", "h":
+            showUsageAndQuit(QuitSuccess)
         else:
             discard
     of cmdEnd:
         discard
+
+setCurrentDir(boundDir)
 
 settings:
   port = Port(boundPort)
@@ -86,5 +102,4 @@ routes:
       resp("Got file, thanks!")
       echo format("Wrote file \"$1\"", request.formData["file"].fields["filename"])
 
-setCurrentDir(boundDir)
 runForever()
