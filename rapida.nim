@@ -1,6 +1,6 @@
 import os, re, jester, asyncdispatch, htmlgen, asyncnet, strutils, parseopt2, parseutils
 
-proc showUsageAndQuit(code) =
+proc showUsageAndQuit(code: int) =
     let usageString = "Usage: rapida [dir] [--port:8001] [--sub:on]"
     echo usageString
     quit(code)
@@ -53,13 +53,20 @@ routes:
       if existsFile(file):
         if file == @"name":
           fileFound = true
-          if getFileSize(file) > 100*1024*1024:
+          if getFileSize(file) > 700*1024*1024:
             await response.sendHeaders(Http404, {"Content-Type": "text/html; charset=utf-8"}.newStringTable())
-            await response.send("File too big (100MB limit), try another!")
+            await response.send("File too big (700MB limit), try another!")
           else :
-            var filecontent = readFile(@"name")
-            await response.sendHeaders(Http200, {"Content-Type": "application/octet-stream", "Content-Length": $filecontent.len}.newStringTable())
-            await response.send(filecontent)
+            var contentType: string
+            var (_, _, fileExt) = splitFile(@"name")
+            case fileExt
+            of ".png", ".PNG":
+              contentType = "image/png"
+            else:
+              contentType = "application/octet-stream"
+            var fileContent = readFile(@"name")
+            await response.sendHeaders(Http200, {"Content-Type": contentType, "Content-Length": $fileContent.len}.newStringTable())
+            await response.send(fileContent)
             echo format("Sent file \"$1\" to client", @"name")
           break
     if not fileFound:
